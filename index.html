@@ -1,0 +1,370 @@
+```html
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Web Realtime Clone</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Firebase Compat SDKs (Reliable Single File Loading) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        wa: {
+                            green: '#25D366',
+                            neon: '#00e676',
+                            dark: '#111b21',
+                            panel: '#202c33',
+                            hover: '#2a3942',
+                            bubbleSender: '#005c4b',
+                            bubbleReceiver: '#202c33'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .glass-panel {
+            background: rgba(17, 27, 33, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-header {
+            background: rgba(32, 44, 51, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-input {
+            background: rgba(17, 27, 33, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .glass-input:focus {
+            border-color: #00e676;
+            box-shadow: 0 0 12px rgba(0, 230, 118, 0.25);
+        }
+
+        .neon-glow {
+            box-shadow: 0 0 15px rgba(0, 230, 118, 0.35);
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00e676;
+        }
+
+        .chat-pattern {
+            background-image: radial-gradient(rgba(0, 230, 118, 0.06) 1.5px, transparent 0);
+            background-size: 20px 20px;
+        }
+    </style>
+</head>
+<body class="bg-black text-gray-100 font-sans h-full overflow-hidden select-none">
+
+    <div id="app-container" class="h-full w-full flex flex-col relative overflow-hidden bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-900 via-wa-dark to-black">
+
+        <!-- DECORATIVE ORBS -->
+        <div class="absolute -top-40 -left-40 w-96 h-96 bg-wa-neon/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-wa-green/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <!-- REGISTRATION / LOGIN MODAL -->
+        <div id="auth-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+            <div class="glass-panel p-8 rounded-3xl w-full max-w-md border border-white/10 shadow-2xl relative">
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 bg-gradient-to-tr from-wa-green to-wa-neon rounded-2xl mx-auto flex items-center justify-center text-black text-3xl mb-3 shadow-lg neon-glow">
+                        <i class="fa-brands fa-whatsapp"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white tracking-tight">WhatsApp Login</h2>
+                    <p class="text-xs text-gray-400 mt-1">Register your Phone Number to join live chat</p>
+                </div>
+
+                <form id="auth-form" class="space-y-4" onsubmit="return false;">
+                    <div>
+                        <label class="text-xs font-semibold uppercase text-gray-400 block mb-1.5">Your Full Name</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-user absolute left-4 top-3.5 text-gray-500"></i>
+                            <input id="reg-name" type="text" required placeholder="e.g. Rahul Sharma" class="w-full pl-11 pr-4 py-3 rounded-xl glass-input text-white focus:outline-none text-sm">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-semibold uppercase text-gray-400 block mb-1.5">Phone Number</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-phone absolute left-4 top-3.5 text-gray-500"></i>
+                            <input id="reg-phone" type="tel" required placeholder="9876543210" class="w-full pl-11 pr-4 py-3 rounded-xl glass-input text-white focus:outline-none text-sm">
+                        </div>
+                    </div>
+
+                    <button id="btn-register" type="submit" class="w-full py-3.5 bg-gradient-to-r from-wa-green to-wa-neon text-black font-bold rounded-xl shadow-lg hover:opacity-95 transition-all flex items-center justify-center space-x-2 neon-glow mt-4">
+                        <span>Register & Connect Live</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </form>
+
+                <div id="auth-error-msg" class="hidden mt-3 text-center text-xs text-red-400 bg-red-950/50 p-2 rounded-lg border border-red-800/50"></div>
+            </div>
+        </div>
+
+        <!-- MAIN LAYOUT -->
+        <div class="h-full w-full flex relative z-10 p-0 md:p-3 gap-3">
+
+            <!-- SIDEBAR: REGISTERED USERS & CHATS -->
+            <div id="sidebar" class="w-full md:w-96 glass-panel rounded-none md:rounded-3xl flex flex-col h-full transition-all duration-300 z-20 absolute md:relative inset-0 md:inset-auto">
+                
+                <!-- MY PROFILE HEADER -->
+                <div class="glass-header p-4 rounded-t-none md:rounded-t-3xl flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="relative">
+                            <img id="my-avatar" src="https://placehold.co/100x100/25D366/ffffff?text=ME" class="w-10 h-10 rounded-full object-cover border-2 border-wa-neon">
+                            <span class="w-3 h-3 bg-wa-neon rounded-full absolute bottom-0 right-0 border-2 border-black"></span>
+                        </div>
+                        <div class="overflow-hidden">
+                            <h3 id="my-name-display" class="font-semibold text-sm text-white truncate max-w-[130px]">My Account</h3>
+                            <p id="my-phone-display" class="text-[11px] text-wa-neon truncate">Connecting...</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <button id="btn-logout" title="Log Out" class="p-2 text-gray-400 hover:text-red-400 hover:bg-white/5 rounded-full transition-all">
+                            <i class="fa-solid fa-right-from-bracket text-base"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SEARCH REGISTERED USERS -->
+                <div class="p-3 border-b border-white/5">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-gray-500 text-sm"></i>
+                        <input id="user-search" type="text" placeholder="Search registered members..." class="w-full pl-10 pr-4 py-2 text-sm rounded-xl glass-input text-white focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="px-4 py-2 text-[11px] font-bold tracking-wider text-wa-neon uppercase flex items-center justify-between border-b border-white/5">
+                    <span>Live Registered Directory</span>
+                    <span id="registered-count-badge" class="bg-wa-green/20 text-wa-neon px-2 py-0.5 rounded-full">0 Users</span>
+                </div>
+
+                <!-- CONTACTS / USERS LIST (LIVE SNAPSHOT) -->
+                <div id="users-list" class="flex-1 overflow-y-auto p-2 space-y-1">
+                    <div class="text-center text-xs text-gray-500 py-8">Loading directory users...</div>
+                </div>
+
+                <!-- FOOTER ACCOUNT DETAILS -->
+                <div class="p-3 border-t border-white/5 text-[11px] text-gray-400 flex justify-between items-center">
+                    <span class="text-gray-400">Status: <strong id="conn-status" class="text-wa-neon">Realtime Connected</strong></span>
+                    <span id="user-id-tag" class="truncate max-w-[140px] text-gray-400"></span>
+                </div>
+            </div>
+
+            <!-- CHAT WINDOW -->
+            <div id="chat-window" class="flex-1 glass-panel rounded-none md:rounded-3xl flex flex-col h-full overflow-hidden relative">
+                
+                <!-- CHAT HEADER -->
+                <div id="chat-header" class="glass-header p-3.5 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <button id="mobile-back-btn" class="md:hidden text-gray-400 hover:text-white mr-1">
+                            <i class="fa-solid fa-arrow-left text-lg"></i>
+                        </button>
+
+                        <div class="relative">
+                            <img id="active-user-avatar" src="https://placehold.co/100x100/202c33/ffffff?text=WA" class="w-10 h-10 rounded-full object-cover border border-white/10">
+                            <span id="active-user-dot" class="w-3 h-3 bg-gray-500 rounded-full absolute bottom-0 right-0 border-2 border-black"></span>
+                        </div>
+
+                        <div>
+                            <h3 id="active-user-name" class="font-semibold text-white text-sm">Select a user to chat</h3>
+                            <p id="active-user-status" class="text-xs text-gray-400">Click any user from the left list</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-2 text-gray-400">
+                        <button id="btn-voice-call" title="Voice Call" class="p-2 hover:bg-white/10 hover:text-wa-neon rounded-full transition-all">
+                            <i class="fa-solid fa-phone text-sm"></i>
+                        </button>
+                        <button id="btn-video-call" title="Video Call" class="p-2 hover:bg-white/10 hover:text-wa-neon rounded-full transition-all">
+                            <i class="fa-solid fa-video text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- MESSAGES AREA -->
+                <div id="messages-container" class="flex-1 overflow-y-auto p-4 space-y-3 chat-pattern relative">
+                    <div id="no-chat-selected" class="h-full flex flex-col items-center justify-center text-center p-6 text-gray-500">
+                        <div class="w-20 h-20 rounded-full bg-wa-panel flex items-center justify-center text-wa-neon text-4xl mb-4 border border-white/10">
+                            <i class="fa-brands fa-whatsapp"></i>
+                        </div>
+                        <h4 class="text-lg font-bold text-white mb-1">WhatsApp Web Realtime Chat</h4>
+                        <p class="text-xs max-w-sm text-gray-400">Select any registered member on the left panel to begin instant end-to-end messaging.</p>
+                    </div>
+                </div>
+
+                <!-- EMOJI PICKER POPUP -->
+                <div id="emoji-picker" class="hidden absolute bottom-20 left-4 z-30 glass-panel p-3 rounded-2xl w-64 border border-white/10 shadow-2xl grid grid-cols-6 gap-2 text-xl">
+                    <button class="emoji-btn hover:scale-125 transition-transform">😀</button>
+                    <button class="emoji-btn hover:scale-125 transition-transform">😂</button>
+                    <button class="emoji-btn hover:scale-125 transition-transform">😍</button>
+                    <button class="emoji-btn hover:scale-125 transition-transform">🔥</button>
+                    <button class="emoji-btn hover:scale-125 transition-transform">👍</button>
+                    <button class="emoji-btn hover:scale-125 transition-transform">❤️</button>
+                    <button class="emoji-btn hover:scale-125 transition-transform">🎉</button>
+                    <button class="emoji-btn hover:scale-125 transition-transform">😎</button>
+                    <button class="emoji-btn hover:scale-125 transition-transform">🚀</button>
+                    <button class="emoji-btn hover:scale-125 transition-transform">🙏</button>
+                    <button class="emoji-btn hover:scale-125 transition-transform">💯</button>
+                    <button class="emoji-btn hover:scale-125 transition-transform">✨</button>
+                </div>
+
+                <!-- MESSAGE INPUT FIELD -->
+                <div id="input-bar" class="glass-header p-3 flex items-center space-x-2 hidden">
+                    <button id="btn-emoji" type="button" class="p-2.5 text-gray-400 hover:text-wa-neon transition-all rounded-full hover:bg-white/5">
+                        <i class="fa-regular fa-face-smile text-xl"></i>
+                    </button>
+
+                    <input id="message-input" type="text" placeholder="Type a message..." class="flex-1 glass-input py-3 px-4 text-sm rounded-xl text-white focus:outline-none">
+
+                    <button id="btn-send" type="button" class="p-3 bg-gradient-to-r from-wa-green to-wa-neon text-black rounded-xl font-bold shadow-lg hover:opacity-90 transition-all flex items-center justify-center neon-glow">
+                        <i class="fa-solid fa-paper-plane text-base"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CALL MODAL SIMULATION -->
+    <div id="call-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div class="glass-panel p-6 rounded-3xl max-w-sm w-full text-center space-y-4 relative border border-white/10">
+            <img id="call-user-avatar" src="https://placehold.co/100x100/202c33/ffffff?text=WA" class="w-20 h-20 rounded-full mx-auto object-cover border-2 border-wa-neon">
+            <div>
+                <h3 id="call-user-name" class="font-bold text-lg text-white">Call</h3>
+                <p id="call-type-label" class="text-xs text-wa-neon">Calling...</p>
+            </div>
+            <div class="flex justify-center space-x-4 pt-2">
+                <button id="end-call-btn" class="w-12 h-12 rounded-full bg-red-600 text-white flex items-center justify-center hover:bg-red-700 transition-all shadow-lg">
+                    <i class="fa-solid fa-phone-slash"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- APPLICATION JAVASCRIPT -->
+    <script>
+        // 1. Firebase Initialization (Using Compat SDKs to ensure guaranteed loading)
+        const firebaseConfig = {
+            apiKey: "AIzaSyD46B90YCaawNuNYX4KvtmlFdlzm3oNiu0",
+            authDomain: "bharat-777.firebaseapp.com",
+            projectId: "bharat-777",
+            storageBucket: "bharat-777.appspot.com",
+            messagingSenderId: "1234567890",
+            appId: "1:1234567890:web:abc123def456"
+        };
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'whatsapp_v3';
+
+        let app, auth, db;
+        let isFirebaseActive = false;
+
+        try {
+            if (!firebase.apps.length) {
+                app = firebase.initializeApp(firebaseConfig);
+            } else {
+                app = firebase.app();
+            }
+            auth = firebase.auth();
+            db = firebase.firestore();
+            isFirebaseActive = true;
+            console.log("Firebase initialized successfully");
+        } catch (e) {
+            console.warn("Firebase initialization failed. Falling back to local offline mode.", e);
+            document.getElementById('conn-status').textContent = 'Local Mode';
+            document.getElementById('conn-status').className = 'text-amber-400';
+        }
+
+        // State Variables
+        let currentUser = null;
+        let myProfile = null;
+        let selectedPeer = null;
+        let unsubUsersList = null;
+        let unsubChatMessages = null;
+        let allRegisteredUsers = [];
+
+        // DOM elements
+        const authModal = document.getElementById('auth-modal');
+        const authForm = document.getElementById('auth-form');
+        const regNameInput = document.getElementById('reg-name');
+        const regPhoneInput = document.getElementById('reg-phone');
+        const authErrorMsg = document.getElementById('auth-error-msg');
+        
+        const myNameDisplay = document.getElementById('my-name-display');
+        const myPhoneDisplay = document.getElementById('my-phone-display');
+        const myAvatar = document.getElementById('my-avatar');
+        const btnLogout = document.getElementById('btn-logout');
+        
+        const usersList = document.getElementById('users-list');
+        const userSearch = document.getElementById('user-search');
+        const countBadge = document.getElementById('registered-count-badge');
+        const userIdTag = document.getElementById('user-id-tag');
+
+        const sidebar = document.getElementById('sidebar');
+        const mobileBackBtn = document.getElementById('mobile-back-btn');
+
+        const chatHeader = document.getElementById('chat-header');
+        const activeUserName = document.getElementById('active-user-name');
+        const activeUserStatus = document.getElementById('active-user-status');
+        const activeUserAvatar = document.getElementById('active-user-avatar');
+        const activeUserDot = document.getElementById('active-user-dot');
+
+        const messagesContainer = document.getElementById('messages-container');
+        const noChatSelected = document.getElementById('no-chat-selected');
+        const inputBar = document.getElementById('input-bar');
+        const messageInput = document.getElementById('message-input');
+        const btnSend = document.getElementById('btn-send');
+        const btnEmoji = document.getElementById('btn-emoji');
+        const emojiPicker = document.getElementById('emoji-picker');
+
+        const callModal = document.getElementById('call-modal');
+        const callUserName = document.getElementById('call-user-name');
+        const callUserAvatar = document.getElementById('call-user-avatar');
+        const callTypeLabel = document.getElementById('call-type-label');
+        const endCallBtn = document.getElementById('end-call-btn');
+
+        // Init App Flow
+        window.addEventListener('load', async () => {
+            if (isFirebaseActive) {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await auth.signInWithCustomToken(__initial_auth_token);
+                    } else {
+                        await auth.signInAnonymously();
+                    }
+   
